@@ -22,9 +22,9 @@ from mindone.diffusers.utils import logging, scale_lora_layers, unscale_lora_lay
 from mindone.diffusers.utils.mindspore_utils import randn_tensor
 from mindone.transformers import CLIPTextModelWithProjection, T5EncoderModel
 
-from ...models.attention_processor import ToDoJointAttnProcessor
-from ...models.clip_attention import clip_attention_construct
-from ...models.transformers.transformer_sd3 import forward_blocks, forward_blocks_range, sd3_transformer2d_construct
+from .models.attention_processor import ToDoJointAttnProcessor
+from .models.clip_attention import clip_attention_construct
+from .models.transformers.transformer_sd3 import forward_blocks, forward_blocks_range, sd3_transformer2d_construct
 
 mindone.diffusers.models.SD3Transformer2DModel.construct = sd3_transformer2d_construct
 mindone.diffusers.models.SD3Transformer2DModel.forward_blocks = forward_blocks
@@ -41,7 +41,7 @@ EXAMPLE_DOC_STRING = """
 
         >>> pipe = StableDiffusion3Pipeline.from_pretrained(
         ...     "stabilityai/stable-diffusion-3-medium-diffusers",
-        ...     custom_pipeline="./", # path where this pipeline.py in
+        ...     custom_pipeline="./sd3_pipeline.py",
         ...     mindspore_dtype=mindspore.float16,
         ... )
         >>> prompt = "A cat holding a sign that says hello world"
