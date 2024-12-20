@@ -9,6 +9,7 @@ import mindspore as ms
 from mindspore import mint, ops
 from mindspore.common.api import _pynative_executor as ms_pyexecutor
 
+import mindone
 from mindone.diffusers.image_processor import VaeImageProcessor
 from mindone.diffusers.loaders import FromSingleFileMixin, SD3LoraLoaderMixin
 from mindone.diffusers.models.autoencoders import AutoencoderKL
@@ -22,8 +23,27 @@ from mindone.diffusers.utils import logging, scale_lora_layers, unscale_lora_lay
 from mindone.diffusers.utils.mindspore_utils import randn_tensor
 from mindone.transformers import CLIPTextModelWithProjection, T5EncoderModel
 
-from .models.attention_processor import ToDoJointAttnProcessor
+from .models.attention_processor import AttnProcessor_PFA, ToDoJointAttnProcessor
+from .models.embeddings_replace import get_timestep_embedding
+from .models.modeling_clip_replace import clip_attention_construct
+from .models.modeling_t5_replace import t5_attention_relative_position_bucket, t5_layernorm_construct
+from .models.normalization_replace import (
+    ada_groupnorm_construct,
+    ada_layernorm_construct,
+    ada_layernorm_continuous_construct,
+    ada_layernormzero_construct,
+)
 from .models.transformers.transformer_sd3 import forward_blocks, forward_blocks_range, sd3_transformer2d_construct
+
+mindone.diffusers.models.normalization.AdaLayerNorm.construct = ada_layernorm_construct
+mindone.diffusers.models.normalization.AdaLayerNormZero.construct = ada_layernormzero_construct
+mindone.diffusers.models.normalization.AdaLayerNormContinuous.construct = ada_layernorm_continuous_construct
+mindone.diffusers.models.normalization.AdaGroupNorm.construct = ada_groupnorm_construct
+mindone.diffusers.models.embeddings.get_timestep_embedding = get_timestep_embedding
+mindone.transformers.models.t5.modeling_t5.T5LayerNorm.construct = t5_layernorm_construct
+mindone.transformers.models.t5.modeling_t5.T5Attention._relative_position_bucket = t5_attention_relative_position_bucket
+mindone.transformers.models.clip.modeling_clip.CLIPAttention.construct = clip_attention_construct
+
 
 logger = logging.get_logger(__name__)
 
@@ -146,6 +166,8 @@ class StableDiffusion3PipelineBoost(DiffusionPipeline, SD3LoraLoaderMixin, FromS
                 transformer_block.attn.layer_idx = block_idx
                 transformer_block.attn.token_merge_factor = self.token_merge_factor
                 transformer_block.attn.token_merge_method = self.token_merge_method
+            for attn in self.vae.decoder.mid_block.attentions:
+                attn.set_processor(AttnProcessor_PFA())
         if self.use_todo != use_todo:
             for transformer_block in self.transformer.transformer_blocks:
                 transformer_block.attn.use_downsample = use_todo
