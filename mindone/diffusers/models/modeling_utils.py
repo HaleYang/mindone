@@ -27,6 +27,7 @@ from huggingface_hub.utils import validate_hf_hub_args
 
 import mindspore as ms
 from mindspore import nn, ops
+from mindspore.nn.utils import no_init_parameters
 
 from mindone.safetensors.mindspore import save_file as safe_save_file
 
@@ -609,7 +610,15 @@ class ModelMixin(nn.Cell, PushToHubMixin):
                     commit_hash=commit_hash,
                 )
 
-            model = cls.from_config(config, **unused_kwargs)
+            with no_init_parameters():
+                model = cls.from_config(config, **unused_kwargs)
+
+            if mindspore_dtype is not None and not isinstance(mindspore_dtype, ms.Type):
+                raise ValueError(
+                    f"{mindspore_dtype} needs to be of type `ms.Type`, e.g. `ms.float16`, but is {type(mindspore_dtype)}."
+                )
+            elif mindspore_dtype is not None:
+                model = model.to(mindspore_dtype)
 
             if is_sharded:
                 load_checkpoint_and_dispatch(
@@ -637,12 +646,7 @@ class ModelMixin(nn.Cell, PushToHubMixin):
                     "error_msgs": error_msgs,
                 }
 
-        if mindspore_dtype is not None and not isinstance(mindspore_dtype, ms.Type):
-            raise ValueError(
-                f"{mindspore_dtype} needs to be of type `ms.Type`, e.g. `ms.float16`, but is {type(mindspore_dtype)}."
-            )
-        elif mindspore_dtype is not None:
-            model = model.to(mindspore_dtype)
+        model.init_parameters_data()
 
         model.register_to_config(_name_or_path=pretrained_model_name_or_path)
 

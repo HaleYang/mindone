@@ -408,6 +408,7 @@ def load_sub_model(
     for class_name, class_candidate in class_candidates.items():
         if class_candidate is not None and issubclass(class_obj, class_candidate):
             load_method_name = importable_classes[class_name][1]
+            break
 
     # if load method name is None, then we have a dummy module -> raise Error
     if load_method_name is None:

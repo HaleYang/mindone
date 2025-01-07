@@ -52,6 +52,7 @@ from transformers.utils.hub import convert_file_size_to_int, get_checkpoint_shar
 
 import mindspore as ms
 from mindspore import Tensor, nn, ops
+from mindspore.nn.utils import no_init_parameters
 
 from .integrations import PeftAdapterMixin
 from .modeling_attn_mask_utils import dtype_to_min
@@ -1730,7 +1731,8 @@ class MSPreTrainedModel(nn.Cell, ModuleUtilsMixin, PushToHubMixin, PeftAdapterMi
 
         config.name_or_path = pretrained_model_name_or_path
         config = copy.deepcopy(config)  # We do not want to modify the config inplace in from_pretrained.
-        model = cls(config, *model_args, **model_kwargs)
+        with no_init_parameters():
+            model = cls(config, *model_args, **model_kwargs)
         # We cannot set default mindspore dtype. So we need to cast model weights after creating.
         if mindspore_dtype is not None:
             model = model.to(mindspore_dtype)
@@ -1775,6 +1777,8 @@ class MSPreTrainedModel(nn.Cell, ModuleUtilsMixin, PushToHubMixin, PeftAdapterMi
                 adapter_kwargs=adapter_kwargs,
             )
 
+        # init rest parameter data which are not from pretrained weight
+        model.init_parameters_data()
         # Set model in evaluation mode to deactivate DropOut modules by default
         model.set_train(False)
 
